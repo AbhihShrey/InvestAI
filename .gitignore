@@ -1,0 +1,17 @@
+# Environment and secrets
+.env
+.schwab_token.json
+config/.env
+config/.schwab_token.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Application data
+.devbox/
+
+.DS_Store
