@@ -231,9 +231,6 @@ export function TradingViewChartWithIndicators({
     // Price (top band ~5%–45%)
     if (data.length > 0) {
       chart.priceScale("right").applyOptions({
-        // Visible range: [0.05, 0.45]
-        topColor: undefined,
-        bottomColor: undefined,
         scaleMargins: { top: 0.05, bottom: 0.55 },
       });
 
@@ -255,8 +252,8 @@ export function TradingViewChartWithIndicators({
 
     // Volume band ~45%–55%
     if (showVolume && indicators?.volume && data.length) {
-      const volData: HistogramData[] = indicators.volume.map((p, i) => ({
-        time: dateToUnix(p.time),
+      const volData = indicators.volume.map((p, i) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
         color:
           data[i] && data[i].close >= data[i].open
@@ -276,8 +273,8 @@ export function TradingViewChartWithIndicators({
 
     // RSI band ~55%–65%
     if (showRsi && indicators?.rsi) {
-      const lineData: LineData[] = indicators.rsi.map((p) => ({
-        time: dateToUnix(p.time),
+      const lineData = indicators.rsi.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
       const rsiSeries = chart.addSeries(LineSeries, {
@@ -296,16 +293,16 @@ export function TradingViewChartWithIndicators({
     // PPO band ~65%–95%
     if (showPpo && indicators?.ppo) {
       const ppo = indicators.ppo;
-      const ppoData: LineData[] = ppo.line.map((p) => ({
-        time: dateToUnix(p.time),
+      const ppoData = ppo.line.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
-      const signalData: LineData[] = ppo.signal.map((p) => ({
-        time: dateToUnix(p.time),
+      const signalData = ppo.signal.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
-      const histData: HistogramData[] = ppo.hist.map((p) => ({
-        time: dateToUnix(p.time),
+      const histData = ppo.hist.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
         color: p.value >= 0 ? "rgba(34, 197, 94, 0.5)" : "rgba(239, 68, 68, 0.5)",
       }));

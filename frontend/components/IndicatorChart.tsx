@@ -86,8 +86,8 @@ export function IndicatorChart({
     });
 
     if (indicator === "volume" && hasVolume && indicators) {
-      const volData: HistogramData[] = indicators.volume.map((p, i) => ({
-        time: dateToUnix(p.time),
+      const volData = indicators.volume.map((p, i) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
         color:
           data[i] && data[i].close >= data[i].open
@@ -98,8 +98,8 @@ export function IndicatorChart({
       series.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
       series.setData(volData);
     } else if (indicator === "rsi" && hasRsi && indicators) {
-      const lineData: LineData[] = indicators.rsi.map((p) => ({
-        time: dateToUnix(p.time),
+      const lineData = indicators.rsi.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
       const series = chart.addSeries(LineSeries, {
@@ -114,16 +114,16 @@ export function IndicatorChart({
       series.setData(lineData);
     } else if (indicator === "ppo" && hasPpo && indicators) {
       const { ppo } = indicators;
-      const ppoData: LineData[] = ppo.line.map((p) => ({
-        time: dateToUnix(p.time),
+      const ppoData = ppo.line.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
-      const signalData: LineData[] = ppo.signal.map((p) => ({
-        time: dateToUnix(p.time),
+      const signalData = ppo.signal.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
       }));
-      const histData: HistogramData[] = ppo.hist.map((p, i) => ({
-        time: dateToUnix(p.time),
+      const histData = ppo.hist.map((p) => ({
+        time: dateToUnix(p.time) as import("lightweight-charts").UTCTimestamp,
         value: p.value,
         color: p.value >= 0 ? "rgba(34, 197, 94, 0.5)" : "rgba(239, 68, 68, 0.5)",
       }));

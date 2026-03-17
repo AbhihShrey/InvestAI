@@ -104,3 +104,113 @@ export async function fetchPrices(
   }
   return res.json();
 }
+
+export interface GexTrade {
+  date: string;
+  strategy: string;
+  action: string;
+  side: string;
+  price: number;
+  gex: number;
+}
+
+export interface GexMetrics {
+  totalReturnPct: number;
+  cagrPct: number;
+  sharpe: number;
+  sortino: number;
+  calmar: number;
+  maxDrawdownPct: number;
+  maxDrawdownDays: number;
+  annualizedVolPct: number;
+  numTrades: number;
+  winRatePct: number;
+  profitFactor: number;
+  avgWinPct: number;
+  avgLossPct: number;
+}
+
+export interface GexStrategyResult {
+  name: string;
+  equityCurve: { time: string; value: number }[];
+  trades: GexTrade[];
+  metrics: GexMetrics;
+}
+
+export interface GexBacktestResponse {
+  rowsLoaded: number;
+  dateRange: { from: string; to: string };
+  results: GexStrategyResult[];
+}
+
+export async function fetchGexBacktest(): Promise<GexBacktestResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/gex/`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface MarketsIndexStat {
+  label: string;
+  symbol: string;
+  price: number;
+  changePct: number;
+  changeAbs: number;
+}
+
+export interface MarketsTableRow {
+  symbol: string;
+  price: number;
+  changePct: number;
+  volume: number;
+  avgVolume: number | null;
+  extra: number | null;
+}
+
+export interface MarketsSectorPerformanceItem {
+  sector: string;
+  changePct: number;
+}
+
+export interface MarketsHeatmapItem {
+  symbol: string;
+  displayName: string;
+  changePct: number;
+  price: number;
+}
+
+export interface MarketsBreadthStats {
+  advancers: number;
+  decliners: number;
+  unchanged: number;
+  advVolume: number;
+  decVolume: number;
+  breadthPct: number;
+}
+
+export interface MarketsSummaryResponse {
+  indices: MarketsIndexStat[];
+  breadth: MarketsBreadthStats;
+  topGainers: MarketsTableRow[];
+  topLosers: MarketsTableRow[];
+  volumeSurge: MarketsTableRow[];
+  sectors: MarketsSectorPerformanceItem[];
+  heatmap: MarketsHeatmapItem[];
+}
+
+export async function fetchMarketsSummary(): Promise<MarketsSummaryResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/markets/`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
+  }
+  return res.json();
+}

@@ -46,6 +46,18 @@ export function AppBar() {
           >
             CHARTS
           </Link>
+          <Link
+            href="/markets"
+            className={`app-header-link ${pathname === "/markets" ? "active" : ""}`}
+          >
+            MARKETS
+          </Link>
+          <Link
+            href="/gex"
+            className={`app-header-link ${pathname === "/gex" ? "active" : ""}`}
+          >
+            GEX
+          </Link>
         </nav>
       </div>
       <div className="app-header-right">
