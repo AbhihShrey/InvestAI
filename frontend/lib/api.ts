@@ -82,6 +82,19 @@ export async function fetchSymbols(): Promise<SymbolResponse[]> {
   return res.json();
 }
 
+export async function createSymbol(ticker: string, name?: string): Promise<SymbolResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/symbols/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ ticker: ticker.toUpperCase(), name: name ?? null }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { detail?: string })?.detail ?? "Failed to create symbol");
+  }
+  return res.json();
+}
+
 export async function fetchPrices(
   symbolId: number,
   fromDate: string,
@@ -101,6 +114,59 @@ export async function fetchPrices(
   );
   if (!res.ok) {
     throw new Error(`API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface OptionContract {
+  symbol: string | null;
+  description: string | null;
+  putCall: string;
+  strike: number;
+  expirationDate: string;
+  bid: number | null;
+  ask: number | null;
+  last: number | null;
+  delta: number | null;
+  gamma: number | null;
+  theta: number | null;
+  vega: number | null;
+  volatility: number | null;
+  volume: number | null;
+}
+
+export interface OptionChainUnderlying {
+  symbol: string;
+  last: number | null;
+  bid: number | null;
+  ask: number | null;
+}
+
+export interface OptionChainResponse {
+  underlying: OptionChainUnderlying | null;
+  calls: OptionContract[];
+  puts: OptionContract[];
+}
+
+export async function fetchOptionChain(
+  symbol: string,
+  contractType = "ALL",
+  strikeRange = "NTM",
+  strikeCount = 10
+): Promise<OptionChainResponse> {
+  const params = new URLSearchParams({
+    symbol,
+    contract_type: contractType,
+    strike_range: strikeRange,
+    strike_count: String(strikeCount),
+  });
+  const res = await fetch(`${API_BASE}/api/v1/options/chain?${params}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
   }
   return res.json();
 }
@@ -203,8 +269,76 @@ export interface MarketsSummaryResponse {
   heatmap: MarketsHeatmapItem[];
 }
 
+export interface SymbolSearchResult {
+  symbol: string;
+  description: string;
+  tracked: boolean;
+  id?: number;
+}
+
+export async function fetchSymbolSearch(
+  q: string,
+  projection = "symbol-search"
+): Promise<SymbolSearchResult[]> {
+  const params = new URLSearchParams({ q, projection });
+  const res = await fetch(`${API_BASE}/api/v1/symbols/search?${params}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function fetchMarketsSummary(): Promise<MarketsSummaryResponse> {
   const res = await fetch(`${API_BASE}/api/v1/markets/`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface MarketHoursResponse {
+  date: string;
+  equityMarketOpen: boolean;
+  optionMarketOpen: boolean;
+  equitySessionStart: string | null;
+  equitySessionEnd: string | null;
+  optionSessionStart: string | null;
+  optionSessionEnd: string | null;
+}
+
+export async function fetchMarketHours(forDate?: string): Promise<MarketHoursResponse> {
+  const params = forDate ? `?for_date=${encodeURIComponent(forDate)}` : "";
+  const res = await fetch(`${API_BASE}/api/v1/markets/hours${params}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: string })?.detail;
+    throw new Error(detail ?? `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface QuoteResponse {
+  symbol: string;
+  last: number;
+  change: number | null;
+  changePct: number | null;
+  volume: number;
+}
+
+export async function fetchQuotes(symbols: string[]): Promise<QuoteResponse[]> {
+  const symStr = symbols.filter((s) => s?.trim()).join(",");
+  if (!symStr) return [];
+  const res = await fetch(`${API_BASE}/api/v1/quotes/?symbols=${encodeURIComponent(symStr)}`, {
     headers: { Accept: "application/json" },
   });
   if (!res.ok) {

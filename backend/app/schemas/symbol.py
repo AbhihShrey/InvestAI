@@ -24,3 +24,12 @@ class SymbolResponse(SymbolBase):
     id: int
 
     model_config = {"from_attributes": True}
+
+
+class SymbolSearchResult(BaseModel):
+    """Single symbol from Schwab search."""
+
+    symbol: str
+    description: str
+    tracked: bool = False  # True if symbol exists in DB
+    id: int | None = None  # present when tracked

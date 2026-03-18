@@ -52,3 +52,13 @@ class MarketsSummaryResponse(BaseModel):
     sectors: list[SectorPerformanceItem]
     heatmap: list[HeatmapItem]
 
+
+class MarketHoursResponse(BaseModel):
+    date: str
+    equityMarketOpen: bool
+    optionMarketOpen: bool
+    equitySessionStart: str | None
+    equitySessionEnd: str | None
+    optionSessionStart: str | None
+    optionSessionEnd: str | None
+

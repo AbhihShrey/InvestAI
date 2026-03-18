@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { fetchMarketHours } from "@/lib/api";
 import { logout } from "@/lib/auth";
 
 export function AppBar() {
@@ -12,6 +13,7 @@ export function AppBar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [time, setTime] = useState("");
+  const [marketOpen, setMarketOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     const format = () =>
@@ -28,6 +30,12 @@ export function AppBar() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    fetchMarketHours()
+      .then((h) => setMarketOpen(h.equityMarketOpen))
+      .catch(() => setMarketOpen(null));
+  }, []);
+
   const handleLogout = () => {
     logout();
     router.replace("/login");
@@ -38,7 +46,28 @@ export function AppBar() {
       <div className="app-header-left">
         <span className="app-status-dot alive" aria-hidden />
         <h1>InvestAI</h1>
-        <span className="app-header-tag running">v1.0</span>
+        <span
+          className={`app-header-tag ${
+            marketOpen === true
+              ? "running"
+              : marketOpen === false
+                ? "market-closed"
+                : "running"
+          }`}
+          title={
+            marketOpen === true
+              ? "Market Open"
+              : marketOpen === false
+                ? "Market Closed"
+                : "Market status"
+          }
+        >
+          {marketOpen === true
+            ? "Open"
+            : marketOpen === false
+              ? "Closed"
+              : "v1.0"}
+        </span>
         <nav className="app-header-links" style={{ marginLeft: 16 }}>
           <Link
             href="/"
@@ -57,6 +86,12 @@ export function AppBar() {
             className={`app-header-link ${pathname === "/gex" ? "active" : ""}`}
           >
             GEX
+          </Link>
+          <Link
+            href="/options"
+            className={`app-header-link ${pathname === "/options" ? "active" : ""}`}
+          >
+            OPTIONS
           </Link>
         </nav>
       </div>

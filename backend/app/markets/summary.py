@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,8 @@ from app.schemas.markets import (
     SectorPerformanceItem,
     TableRow,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _sector_for_symbol(ticker: str) -> str:
@@ -52,7 +55,10 @@ def _sector_for_symbol(ticker: str) -> str:
     return mapping.get(ticker.upper(), "Other")
 
 
-async def compute_markets_summary(db: AsyncSession) -> MarketsSummaryResponse:
+async def compute_markets_summary(
+    db: AsyncSession,
+    movers_index: str | None = None,
+) -> MarketsSummaryResponse:
     """Compute market indices, gainers/losers, breadth, sectors, and heatmap."""
     # Get latest 1D candles for all symbols.
     latest_date_subq = (
@@ -101,9 +107,11 @@ async def compute_markets_summary(db: AsyncSession) -> MarketsSummaryResponse:
     if not universe:
         universe = rows  # fall back rather than returning empty
 
-    # Pre-compute change %, volume, etc.
+    # Pre-compute change %, volume, etc. Build ticker -> Symbol map for sector lookup.
+    ticker_to_symbol: Dict[str, Symbol] = {}
     symbols_data: List[Dict[str, Any]] = []
     for candle, symbol in universe:
+        ticker_to_symbol[symbol.ticker.upper()] = symbol
         price = float(candle.close)
         open_price = float(candle.open)
         change_pct = ((price - open_price) / open_price * 100) if open_price else 0.0
@@ -116,6 +124,7 @@ async def compute_markets_summary(db: AsyncSession) -> MarketsSummaryResponse:
                 "open": open_price,
                 "changePct": change_pct,
                 "volume": volume,
+                "symbol_obj": symbol,
             }
         )
 
@@ -204,10 +213,37 @@ async def compute_markets_summary(db: AsyncSession) -> MarketsSummaryResponse:
         surge_candidates, key=lambda r: r.extra or 0, reverse=True
     )[:20]
 
-    # Sector performance.
+    # Sector performance: prefer DB sector, else Schwab fundamentals, else fallback.
+    need_fundamentals = [
+        d["ticker"] for d in symbols_data
+        if not (ticker_to_symbol.get(d["ticker"].upper()) and ticker_to_symbol.get(d["ticker"].upper(), Symbol).sector)
+    ]
+    fundamentals_map: Dict[str, str | None] = {}
+    if need_fundamentals:
+        try:
+            from app.schwab.fundamentals import fetch_fundamentals
+
+            fund = fetch_fundamentals(need_fundamentals[:50])  # limit batch size
+            for ticker, info in fund.items():
+                sector_val = info.get("sector")
+                fundamentals_map[ticker] = sector_val
+                sym = ticker_to_symbol.get(ticker)
+                if sym and sector_val:
+                    sym.sector = sector_val
+                    if info.get("industry"):
+                        sym.industry = info["industry"]
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Schwab fundamentals unavailable: %s", e)
+
+    def _resolve_sector(ticker: str) -> str:
+        sym = ticker_to_symbol.get(ticker)
+        if sym and sym.sector:
+            return sym.sector
+        return fundamentals_map.get(ticker) or _sector_for_symbol(ticker)
+
     sector_changes: Dict[str, List[float]] = defaultdict(list)
     for d in symbols_data:
-        sector = _sector_for_symbol(d["ticker"])
+        sector = _resolve_sector(d["ticker"])
         sector_changes[sector].append(d["changePct"])
     sectors: List[SectorPerformanceItem] = []
     for sector, changes in sector_changes.items():
@@ -232,6 +268,19 @@ async def compute_markets_summary(db: AsyncSession) -> MarketsSummaryResponse:
         )
         for d in heatmap_data
     ]
+
+    # Prefer Schwab movers when available; fall back to DB-derived.
+    try:
+        from app.schwab.movers import fetch_movers
+
+        idx = movers_index or "$SPX"
+        schwab_gainers = fetch_movers(index=idx, sort_order="PERCENT_CHANGE_UP")
+        schwab_losers = fetch_movers(index=idx, sort_order="PERCENT_CHANGE_DOWN")
+        if schwab_gainers or schwab_losers:
+            top_gainers = schwab_gainers[:20] if schwab_gainers else top_gainers
+            top_losers = schwab_losers[:20] if schwab_losers else top_losers
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Schwab movers unavailable, using DB-derived: %s", e)
 
     return MarketsSummaryResponse(
         indices=indices,

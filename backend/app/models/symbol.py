@@ -21,6 +21,8 @@ class Symbol(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
     name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sector: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
     price_candles: Mapped[list["PriceCandle"]] = relationship(
         "PriceCandle", back_populates="symbol", cascade="all, delete-orphan"
